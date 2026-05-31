@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Streaming Lab | Premium Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Премиум чист SaaS стил (Изцяло бял/светъл) */
+        :root {
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --primary: #007bff;
+            --primary-light: #e7f5ff;
+            --text-main: #111111;
+            --text-muted: #6c757d;
+            --border-color: #e9ecef;
+            --radius: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
+            background: var(--bg-color); 
+            color: var(--text-main); 
+            padding: 40px 20px; 
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+            transition: all 0.3s ease;
+        }
+
+        header.minimized {
+            margin-bottom: 20px;
+        }
+
+        h1 { 
+            font-weight: 800; 
+            font-size: 2.8rem;
+            margin-bottom: 8px;
+            letter-spacing: -1px;
+        }
+
+        .subtitle { 
+            color: var(--text-muted); 
+            font-size: 1.1rem; 
+            font-weight: 400;
+        }
+
+        /* Секция с начални картички */
+        .categories-welcome {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            margin-top: 20px;
+        }
+
+        .category-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 40px 30px;
+            text-align: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.015);
+            transition: all 0.35s cubic-bezier(0.165, 0.84, 0.44, 1);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 180px;
+        }
+
+        .category-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: var(--primary);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .category-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
+            border-color: #dee2e6;
+        }
+
+        .category-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .category-card h3 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #1a1a1a;
+        }
+
+        .category-card p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        /* Горно меню за бърза навигация между категориите */
+        .top-nav {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 35px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 20px;
+        }
+
+        .nav-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            padding: 10px 20px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-btn:hover {
+            color: var(--text-main);
+            background: #eef1f4;
+        }
+
+        .nav-btn.active {
+            color: var(--primary);
+            background: var(--primary-light);
+            border-color: transparent;
+        }
+
+        #btn-home {
+            border: 1px solid var(--border-color);
+            background: var(--card-bg);
+            color: var(--text-main);
+        }
+        
+        #btn-home:hover {
+            background: #f1f3f5;
+        }
+
+        /* Видео мрежа */
+        .video-view {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+        }
+
+        .video-container {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.015);
+            border: 1px solid #eeeeee;
+            transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+        }
+
+        .video-container:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.05);
+            border-color: #dee2e6;
+        }
+
+        .video-container.expanded {
+            grid-column: 1 / -1;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.08);
+        }
+
+        video { 
+            width: 100%; 
+            aspect-ratio: 16 / 9; 
+            background: #000000; 
+            display: block;
+            cursor: pointer;
+        }
+
+        .info-bar {
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .channel-name { 
+            font-weight: 700; 
+            font-size: 1.1rem; 
+        }
+        
+        .live-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-muted);
+        }
+
+        .status-dot {
+            height: 8px; 
+            width: 8px;
+            background: #2ed573;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 8px #2ed573;
+        }
+
+        footer {
+            margin-top: 80px;
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border-color);
+            padding-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header id="mainHeader">
+        <h1>Streaming <span style="color: var(--primary);">Lab</span></h1>
+        <div class="subtitle" id="mainSubtitle">Учебна система за анализ на стрийминг протоколи</div>
+    </header>
+
+    <div class="categories-welcome" id="welcomeSection">
+        <div class="category-card" onclick="switchCategory('f1')">
+            <h3>Формула 1</h3>
+            <p>Телеметрия в реално време и високоскоростни потоци</p>
+        </div>
+        <div class="category-card" onclick="switchCategory('sports')">
+            <h3>Спорт</h3>
+            <p>Надпревари и спортни канали на живо през локален робот</p>
+        </div>
+        <div class="category-card" onclick="switchCategory('movies')">
+            <h3>Филми</h3>
+            <p>Кинематографични стриймове и развлекателно съдържание</p>
+        </div>
+    </div>
+
+    <div class="top-nav" id="topNav">
+        <button class="nav-btn" id="btn-home" onclick="showWelcomeScreen()">Начало</button>
+        <button class="nav-btn" id="btn-f1" onclick="switchCategory('f1')">Формула 1</button>
+        <button class="nav-btn" id="btn-sports" onclick="switchCategory('sports')">Спорт</button>
+        <button class="nav-btn" id="btn-movies" onclick="switchCategory('movies')">Филми</button>
+    </div>
+
+    <div class="video-view" id="videoViewSection">
+        <div class="video-grid" id="videoGrid"></div>
+    </div>
+
+    <footer>
+        Учебна цел: Анализ на HTTP Live Streaming (HLS) и мрежова сигурност.
+    </footer>
+</div>
+
+<script>
+    let checkInterval = null;
+    let activeCategory = null;
+
+    // ОБНОВЕНА СТРУКТУРА НА КАТЕГОРИИТЕ С ТВОИТЕ ИЗИСКВАНИЯ
+    const categoryContents = {
+        f1: [
+            { id: 'diema3', name: 'Diema Sport 3', url: '', isDynamic: true }
+        ],
+        sports: [
+            { id: 'diema1', name: 'Diema Sport', url: '', isDynamic: true },
+            { id: 'diema2', name: 'Diema Sport 2', url: '', isDynamic: true },
+            { id: 'diema3', name: 'Diema Sport 3', url: '', isDynamic: true }, // Само 1 плейър за Diema Sport 3 тук
+            { id: 'max1', name: 'Max Sport 1', url: '', isDynamic: true },
+            { id: 'max2', name: 'Max Sport 2', url: '', isDynamic: true },
+            { id: 'euro1', name: 'ЕвроСпорт 1', url: '', isDynamic: true },
+            { id: 'euro2', name: 'ЕвроСпорт 2', url: '', isDynamic: true }
+        ],
+        movies: [
+            { id: 'btv_comedy', name: 'BTV Comedy', url: '', isDynamic: true },
+            { id: 'movie_test', name: 'Cinema Test Channel', url: 'https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8', isDynamic: false }
+        ]
+    };
+
+    function switchCategory(category) {
+        // Задължително спиране на пауза на абсолютно всички плеъри при смяна на раздела
+        document.querySelectorAll('video').forEach(video => {
+            video.pause();
+        });
+
+        activeCategory = category;
+        
+        document.getElementById('mainHeader').classList.add('minimized');
+        document.getElementById('mainSubtitle').innerText = "Преглед на категория: " + (category === 'f1' ? 'Формула 1' : category === 'sports' ? 'Спорт' : 'Филми');
+        
+        document.getElementById('welcomeSection').style.display = 'none';
+        document.getElementById('topNav').style.display = 'flex';
+        
+        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById('btn-' + category).classList.add('active');
+        
+        const videoView = document.getElementById('videoViewSection');
+        videoView.style.display = 'block';
+        setTimeout(() => videoView.style.opacity = '1', 50);
+
+        renderPlayers();
+
+        if (checkInterval) clearInterval(checkInterval);
+        
+        loadStreamsLogic();
+        checkInterval = setInterval(loadStreamsLogic, 3000);
+    }
+
+    function showWelcomeScreen() {
+        if (checkInterval) clearInterval(checkInterval);
+        activeCategory = null;
+
+        document.getElementById('mainHeader').classList.remove('minimized');
+        document.getElementById('mainSubtitle').innerText = "Учебна система за анализ на стрийминг протоколи";
+
+        // Спиране и изчистване на сорсовете при връщане в Начало
+        document.querySelectorAll('video').forEach(video => {
+            video.pause();
+            video.src = "";
+            video.load();
+        });
+
+        document.getElementById('videoViewSection').style.display = 'none';
+        document.getElementById('videoViewSection').style.opacity = '0';
+        document.getElementById('topNav').style.display = 'none';
+        document.getElementById('welcomeSection').style.display = 'grid';
+    }
+
+    function renderPlayers() {
+        const grid = document.getElementById('videoGrid');
+        grid.innerHTML = ''; 
+
+        const channels = categoryContents[activeCategory];
+        channels.forEach(channel => {
+            const container = document.createElement('div');
+            container.className = 'video-container';
+            container.onclick = function(e) { 
+                if (e.target.tagName !== 'VIDEO') toggleExpand(this); 
+            };
+
+            // НАСТРОЙКА: Добавен е атрибут 'muted' и няма autoplay (изчакват клик)
+            container.innerHTML = `
+                <video id="${channel.id}" controls preload="auto" muted></video>
+                <div class="info-bar">
+                    <span class="channel-name">${channel.name}</span>
+                    <span class="live-status"><span class="status-dot"></span> LIVE</span>
+                </div>
+            `;
+            grid.appendChild(container);
+
+            if (!channel.isDynamic && channel.url) {
+                initPlayer(channel.id, channel.url);
+            }
+        });
+    }
+
+    async function loadStreamsLogic() {
+        if (!activeCategory) return;
+
+        const dynamicChannels = categoryContents[activeCategory].filter(c => c.isDynamic);
+        if (dynamicChannels.length === 0) return; 
+
+        try {
+            const response = await fetch('http://localhost:3000/api/streams');
+            const streams = await response.json();
+
+            dynamicChannels.forEach(channel => {
+                const liveUrl = streams[channel.id];
+                const videoElement = document.getElementById(channel.id);
+                
+                if (liveUrl && liveUrl.includes('.m3u8') && videoElement && !videoElement.dataset.loaded) {
+                    console.log(`Зареждане на поток за ${channel.name}:`, liveUrl);
+                    videoElement.dataset.loaded = "true";
+                    initPlayer(channel.id, liveUrl);
+                }
+            });
+        } catch (error) {
+            console.log("Локалният сървър (server.js) не реагира. Проверете терминала.");
+        }
+    }
+
+    function initPlayer(id, url) {
+        const video = document.getElementById(id);
+        if (!video) return;
+
+        if (Hls.isSupported()) {
+            const hls = new Hls();
+            hls.loadSource(url);
+            hls.attachMedia(video);
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = url;
+        }
+    }
+
+    function toggleExpand(element) {
+        const isExpanded = element.classList.contains('expanded');
+        document.querySelectorAll('.video-container').forEach(el => el.classList.remove('expanded'));
+        
+        if (!isExpanded) {
+            element.classList.add('expanded');
+            setTimeout(() => {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 300);
+        }
+    }
+</script>
+</body>
+</html>
